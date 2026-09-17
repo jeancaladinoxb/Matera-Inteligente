@@ -1,0 +1,6 @@
+especie,humedad_min,humedad_max,luz_min,luz_max,temp_min,temp_max
+Orquidea,40,70,10000,20000,18,25
+Cactus,10,30,25000,50000,15,35
+Helecho,60,90,3000,8000,16,24
+Suculenta,20,40,15000,30000,12,30
+Ficus,50,75,8000,18000,15,28
