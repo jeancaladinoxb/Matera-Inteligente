@@ -1,5 +1,6 @@
 import os
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 import dataclasses
 
 from application.use_cases import EvaluarMateraUseCase
@@ -9,6 +10,7 @@ from domain.exceptions import EspecieNoEncontradaError, ValorFueraDeRangoFisicoE
 
 # 1. Inicializar la app de Flask
 app = Flask(__name__)
+CORS(app)
 
 # 2. Inyección de dependencias
 ruta_csv = os.path.join(os.path.dirname(__file__), 'infrastructure', 'especies.csv')
