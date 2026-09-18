@@ -67,3 +67,10 @@ class CsvEspecieRepository(EspecieRepository):
         """
         especies = self._cargar_todas()
         return [rango.nombre_especie for rango in especies.values()]
+    def obtener_todas_las_especies(self) -> List[RangoEspecie]:
+        """
+        Implementación para retornar todas las entidades completas.
+        """
+        especies_dict = self._cargar_todas()
+        return list(especies_dict.values())
+

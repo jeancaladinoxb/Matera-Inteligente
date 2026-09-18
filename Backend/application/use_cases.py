@@ -72,3 +72,19 @@ class EvaluarMateraUseCase:
         """
         nombres = self.especie_repository.listar_especies()
         return [{"nombre": nombre} for nombre in nombres]
+    def obtener_catalogo_especies(self) -> List[Dict]:
+        """
+        Retorna todas las especies con sus rangos formateadas para RF5.
+        """
+        especies = self.especie_repository.obtener_todas_las_especies()
+        catalogo = []
+        for e in especies:
+            catalogo.append({
+                "nombre": e.nombre_especie,
+                "rangos": {
+                    "humedad": {"min": e.humedad_min, "max": e.humedad_max},
+                    "luz": {"min": e.luz_min, "max": e.luz_max},
+                    "temperatura": {"min": e.temp_min, "max": e.temp_max}
+                }
+            })
+        return catalogo

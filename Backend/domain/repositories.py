@@ -31,3 +31,9 @@ class EspecieRepository(ABC):
         Retorna la lista de nombres de especies disponibles en el repositorio.
         """
         pass
+    @abstractmethod
+    def obtener_todas_las_especies(self) -> List[RangoEspecie]:
+        """
+        Retorna la lista de todas las especies con sus respectivos rangos ideales.
+        """
+        pass

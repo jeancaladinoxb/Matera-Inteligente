@@ -22,7 +22,16 @@ caso_de_uso = EvaluarMateraUseCase(repositorio)
 def health_check():
     return jsonify({"estado": "OK", "mensaje": "API de Matera Inteligente funcionando"}), 200
 
-# 4. Endpoint Principal
+# Endpoint para exponer el catálogo de especies (Requisito RF5)
+@app.route('/api/v1/especies', methods=['GET'])
+def listar_especies_rf5():
+    try:
+        # Llamamos al caso de uso que armaste en el paso 3
+        catalogo = caso_de_uso.obtener_catalogo_especies()
+        return jsonify(catalogo), 200
+    except Exception as e:
+        return jsonify({"error": f"Error interno: {str(e)}"}), 500
+
 @app.route('/api/v1/evaluar', methods=['POST'])
 def evaluar_matera():
     data = request.get_json()
