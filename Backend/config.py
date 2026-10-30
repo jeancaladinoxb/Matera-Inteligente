@@ -21,7 +21,7 @@ TIPO_DISPOSITIVO = "dispositivo"
 TABLAS_VALIDAS = ("csv", "bd")
 LARGO_MINIMO_SECRETO = 16
 
-_RUTA_CSV_POR_DEFECTO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "infrastructure", "especies.csv")
+RUTA_CSV_POR_DEFECTO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "infrastructure", "especies.csv")
 
 
 class ErrorConfiguracion(Exception):
@@ -63,7 +63,7 @@ def cargar_config(env: Mapping[str, str] = os.environ) -> Config:
     origenes = [o.strip() for o in env.get("MATERA_CORS_ORIGINS", "").split(",") if o.strip()]
     return Config(
         tabla=tabla,
-        ruta_csv=env.get("MATERA_CSV") or _RUTA_CSV_POR_DEFECTO,
+        ruta_csv=env.get("MATERA_CSV") or RUTA_CSV_POR_DEFECTO,
         ruta_db=env.get("MATERA_DB") or "matera.db",
         jwt_secret=secreto,
         cors_origins=origenes,
