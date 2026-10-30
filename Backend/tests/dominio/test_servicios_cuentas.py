@@ -123,6 +123,62 @@ class TestAutenticarUsuario(unittest.TestCase):
         self.assertEqual(str(mala.exception), str(inexistente.exception))
 
 
+class HasherContador(HasherFalso):
+    """Cuenta cuántas veces se hashea y se compara."""
+
+    def __init__(self):
+        self.llamadas_hashear = 0
+        self.llamadas_coincide = 0
+        self.hashes_comparados = []
+
+    def hashear(self, password):
+        self.llamadas_hashear += 1
+        return super().hashear(password)
+
+    def coincide(self, password, password_hash):
+        self.llamadas_coincide += 1
+        self.hashes_comparados.append(password_hash)
+        # Se llama a hashear del padre (no a self.hashear) para no contarlo como un hasheo más
+        return HasherFalso.hashear(self, password) == password_hash
+
+
+class TestIniciarSesionTiempoConstante(unittest.TestCase):
+    def setUp(self):
+        self.hasher = HasherContador()
+        self.usuarios = UsuariosEnMemoria()
+        self.servicio = AutenticarUsuarioServicio(self.usuarios, self.hasher, EmisorFalso())
+        self.servicio.registrar("ana@correo.co", "clave-12345")
+        self.hasher.llamadas_hashear = self.hasher.llamadas_coincide = 0
+        self.hasher.hashes_comparados.clear()
+
+    def test_el_hash_falso_se_calcula_una_sola_vez_en_el_constructor(self):
+        hasher = HasherContador()
+        servicio = AutenticarUsuarioServicio(UsuariosEnMemoria(), hasher, EmisorFalso())
+        self.assertEqual(hasher.llamadas_hashear, 1)
+        for _ in range(3):
+            with self.assertRaises(CredencialesInvalidas):
+                servicio.iniciar_sesion("nadie@correo.co", "clave-12345")
+        self.assertEqual(hasher.llamadas_hashear, 1)
+
+    def test_coincide_se_invoca_si_el_usuario_existe(self):
+        with self.assertRaises(CredencialesInvalidas):
+            self.servicio.iniciar_sesion("ana@correo.co", "equivocada-123")
+        self.assertEqual(self.hasher.llamadas_coincide, 1)
+        self.assertEqual(self.hasher.hashes_comparados, [self.usuarios.por_email("ana@correo.co").password_hash])
+
+    def test_coincide_se_invoca_tambien_si_el_usuario_no_existe(self):
+        with self.assertRaises(CredencialesInvalidas):
+            self.servicio.iniciar_sesion("nadie@correo.co", "clave-12345")
+        self.assertEqual(self.hasher.llamadas_coincide, 1)
+        self.assertNotIn(self.usuarios.por_email("ana@correo.co").password_hash, self.hasher.hashes_comparados)
+
+    def test_el_hash_falso_nunca_deja_entrar(self):
+        # Aunque la contraseña sea la del hash falso (que nadie conoce), un usuario inexistente no inicia sesión
+        with self.assertRaises(CredencialesInvalidas):
+            self.servicio.iniciar_sesion("nadie@correo.co", "")
+        self.assertEqual(self.servicio.iniciar_sesion("ana@correo.co", "clave-12345"), "token-usuario:" + self.usuarios.por_email("ana@correo.co").id)
+
+
 class TestVincularDispositivo(unittest.TestCase):
     def setUp(self):
         self.plantas = PlantasEnMemoria()

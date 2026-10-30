@@ -29,6 +29,8 @@ class AutenticarUsuarioServicio:
         self._usuarios = usuarios
         self._hasher = hasher
         self._emisor = emisor
+        # Hash de una contraseña que nadie conoce: sirve para gastar el mismo tiempo cuando el usuario no existe
+        self._hash_falso = hasher.hashear(uuid.uuid4().hex)
 
     def registrar(self, email: str, password: str) -> Usuario:
         email = _normalizar_email(email)
@@ -43,8 +45,11 @@ class AutenticarUsuarioServicio:
 
     def iniciar_sesion(self, email: str, password: str) -> str:
         usuario = self._usuarios.por_email(_normalizar_email(email))
-        # El mismo error si el usuario no existe o la contraseña es mala: no se revela qué correos existen
-        if usuario is None or not self._hasher.coincide(password, usuario.password_hash):
+        # Siempre se compara contra un hash, exista o no el usuario: así la respuesta tarda igual
+        # y no se revela qué correos existen. El error también es el mismo en ambos casos.
+        hash_a_comparar = usuario.password_hash if usuario is not None else self._hash_falso
+        coincide = self._hasher.coincide(password, hash_a_comparar)
+        if usuario is None or not coincide:
             raise CredencialesInvalidas()
         return self._emisor.token_usuario(usuario.id)
 
