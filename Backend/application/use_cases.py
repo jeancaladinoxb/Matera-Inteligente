@@ -2,7 +2,7 @@ from typing import List, Dict
 from domain.repositories import EspecieRepository
 from domain.entities import LecturaSensores
 from domain.services import EvaluadorVitalidadService
-from domain.exceptions import EspecieNoEncontradaError
+from domain.excepciones import EspecieNoEncontradaError
 from application.dto import EvaluacionRequestDTO, EvaluacionResponseDTO
 
 # Principio de Inversion de Dependencias (DIP): El caso de uso no depende de una implementacion concreta

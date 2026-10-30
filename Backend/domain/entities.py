@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from domain.value_objects import EstadoParametro, IndiceVitalidad
-from domain.exceptions import ValorFueraDeRangoFisicoError
+from domain.excepciones import ValorFueraDeRangoFisicoError
 
 # Principio de Responsabilidad Unica (SRP): Este archivo contiene unicamente la definicion de las entidades
 # principales del dominio, las cuales representan el modelo del negocio de la matera inteligente.

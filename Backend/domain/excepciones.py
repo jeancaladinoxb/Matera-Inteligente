@@ -34,3 +34,23 @@ class EspecieNoEncontradaError(ExcepcionDominioBase):
         self.nombre_especie = nombre_especie
         mensaje = f"La especie '{nombre_especie}' no se encuentra registrada en el sistema."
         super().__init__(mensaje)
+
+
+class LecturaInvalida(ExcepcionDominioBase):
+    pass
+
+
+class AccesoDenegado(ExcepcionDominioBase):
+    pass
+
+
+class DispositivoInactivo(ExcepcionDominioBase):
+    pass
+
+
+class DispositivoNoEncontrado(ExcepcionDominioBase):
+    pass
+
+
+class DispositivoYaVinculado(ExcepcionDominioBase):
+    pass

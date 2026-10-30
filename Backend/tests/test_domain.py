@@ -2,7 +2,7 @@ import unittest
 from domain.entities import LecturaSensores, RangoEspecie
 from domain.value_objects import EstadoParametro
 from domain.services import EvaluadorVitalidadService
-from domain.exceptions import ValorFueraDeRangoFisicoError, EspecieNoEncontradaError
+from domain.excepciones import ValorFueraDeRangoFisicoError, EspecieNoEncontradaError
 from domain.repositories import EspecieRepository
 from application.dto import EvaluacionRequestDTO
 from application.use_cases import EvaluarMateraUseCase
