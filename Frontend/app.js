@@ -1,15 +1,12 @@
 // Escuchamos el evento de "submit" del formulario
 document.getElementById('materaForm').addEventListener('submit', async function(event) {
-    // 1. Evita que la página se recargue (Regla RA2)
     event.preventDefault();
 
-    // 2. Capturamos los datos del HTML
     const especie = document.getElementById('especie').value;
     const humedad = parseFloat(document.getElementById('humedad').value);
     const luz = parseFloat(document.getElementById('luz').value);
     const temperatura = parseFloat(document.getElementById('temperatura').value);
 
-    // 3. Construimos el objeto JSON que enviaremos
     const requestData = {
         especie: especie,
         humedad: humedad,
@@ -18,7 +15,7 @@ document.getElementById('materaForm').addEventListener('submit', async function(
     };
 
     try {
-        // 4. Petición ASÍNCRONA al Backend usando fetch/await (Regla RA2)
+
         const response = await fetch('http://127.0.0.1:5000/api/v1/evaluar', {
             method: 'POST', 
             headers: {
@@ -27,7 +24,6 @@ document.getElementById('materaForm').addEventListener('submit', async function(
             body: JSON.stringify(requestData)
         });
 
-        // 5. Transformamos la respuesta en un objeto JavaScript
         const data = await response.json();
 
         if (response.ok) {
