@@ -1,5 +1,15 @@
+# Entorno virtual y bytecode. En la fase 1 se versionaron por error.
 .venv/
+venv/
 __pycache__/
-.DS_Store
+*.py[cod]
+
+# Base de datos local y secretos. El JWT_SECRET nunca va al repositorio.
+*.db
 .env
-matera.db
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

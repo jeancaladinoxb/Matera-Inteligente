@@ -30,7 +30,7 @@ def _numero(data: Dict[str, Any], campo: str) -> float:
     return float(valor)
 
 
-def _limite(valor: Optional[str], por_defecto: int = 50, maximo: int = 500) -> int:
+def _limite(valor: Optional[str], por_defecto: int = 20, maximo: int = 200) -> int:
     if valor is None:
         return por_defecto
     try:
@@ -42,20 +42,41 @@ def _limite(valor: Optional[str], por_defecto: int = 50, maximo: int = 500) -> i
     return limite
 
 
-def _estado_a_dict(estado) -> Dict[str, Any]:
-    """Traduce EstadoPlanta (dominio) a JSON. Ajustar a los campos reales."""
-    marca = estado.marca_tiempo
+def _medicion(lectura, evaluacion) -> Dict[str, Any]:
+    """Traduce una evaluacion del dominio al JSON de docs/API.md.
+
+    Los enums salen con .value y el indice de vitalidad se abre en porcentaje
+    y nivel: el dominio no sabe nada de JSON, la traduccion es aqui.
+    """
     return {
-        "planta_id": estado.planta_id,
-        "marca_tiempo": marca.isoformat() if hasattr(marca, "isoformat") else marca,
-        "humedad": estado.humedad,
-        "luz": estado.luz,
-        "temperatura": estado.temperatura,
-        "estado_humedad": estado.estado_humedad,
-        "estado_luz": estado.estado_luz,
-        "estado_temperatura": estado.estado_temperatura,
-        "vitalidad": estado.vitalidad,
+        "lecturas": {
+            "humedad": lectura.humedad,
+            "luz": lectura.luz,
+            "temperatura": lectura.temperatura,
+        },
+        "estados": {
+            "humedad": evaluacion.estado_humedad.value,
+            "luz": evaluacion.estado_luz.value,
+            "temperatura": evaluacion.estado_temperatura.value,
+        },
+        "vitalidad": {
+            "porcentaje": evaluacion.indice_vitalidad.porcentaje,
+            "nivel": evaluacion.indice_vitalidad.nivel,
+        },
     }
+
+
+def _estado_a_dict(estado) -> Dict[str, Any]:
+    """EstadoPlanta -> JSON. La especie y el dispositivo salen de la propia
+    lectura evaluada; el nombre de la planta lo tiene el cliente de GET /api/plantas."""
+    cuerpo = {
+        "planta_id": estado.planta_id,
+        "especie": estado.evaluacion.nombre_especie,
+        "dispositivo_id": estado.lectura.dispositivo_id,
+        "marca_tiempo": estado.lectura.marca_tiempo.isoformat(),
+    }
+    cuerpo.update(_medicion(estado.lectura, estado.evaluacion))
+    return cuerpo
 
 
 # ---------- Blueprint ----------
@@ -76,9 +97,11 @@ def crear_blueprint_front(
         return jsonify([
             {
                 "nombre": e.nombre,
-                "humedad_min": e.humedad_min, "humedad_max": e.humedad_max,
-                "luz_min": e.luz_min, "luz_max": e.luz_max,
-                "temp_min": e.temp_min, "temp_max": e.temp_max,
+                "rangos": {
+                    "humedad": {"min": e.humedad_min, "max": e.humedad_max},
+                    "luz": {"min": e.luz_min, "max": e.luz_max},
+                    "temperatura": {"min": e.temp_min, "max": e.temp_max},
+                },
             }
             for e in listar_especies.listar()
         ]), 200
@@ -93,7 +116,9 @@ def crear_blueprint_front(
             luz=_numero(data, "luz"),
             temperatura=_numero(data, "temperatura"),
         )
-        return jsonify(resultado), 200
+        cuerpo = {"especie": resultado.nombre_especie}
+        cuerpo.update(_medicion(resultado.lecturas, resultado))
+        return jsonify(cuerpo), 200
 
     @bp.post("/api/plantas")
     @usuario_requerido

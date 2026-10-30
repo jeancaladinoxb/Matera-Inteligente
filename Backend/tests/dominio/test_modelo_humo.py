@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from domain.excepciones import AccesoDenegado
 from domain.modelo import (
     Dispositivo, EstadoParametro, EstadoPlanta, EvaluacionMatera, IndiceVitalidad,
-    Lectura, LecturaSensores, Planta, RangoEspecie, Usuario,
+    Lectura, Planta, RangoEspecie, Usuario,
 )
 
 
@@ -14,7 +14,7 @@ class TestModeloHumo(unittest.TestCase):
         marca = datetime(2026, 1, 1, tzinfo=timezone.utc)
         lectura = Lectura("d1", marca, 50.0, 10000.0, 20.0)
         evaluacion = EvaluacionMatera(
-            "Orquidea", LecturaSensores(50.0, 10000.0, 20.0),
+            "Orquidea", Lectura("d-1", datetime.now(timezone.utc), 50.0, 10000.0, 20.0),
             EstadoParametro.OPTIMO, EstadoParametro.OPTIMO, EstadoParametro.OPTIMO,
             IndiceVitalidad(100.0, "EXCELENTE"),
         )

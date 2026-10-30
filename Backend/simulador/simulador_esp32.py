@@ -7,16 +7,19 @@ import urllib.request
 from datetime import datetime, timezone
 from typing import Dict, Optional, Tuple
 
-# Rangos de ejemplo por especie: (humedad, luz, temperatura) como (min, max).
-# DEBEN coincidir con la tabla de referencia (CSV/BD) que use el backend.
+# Rangos por especie, copiados de infrastructure/especies.csv.
+# Si no coinciden con la tabla de referencia, las lecturas "normales" llegan
+# fuera de rango y la demo parece rota aunque el backend este bien.
 ESPECIES = {
-    "helecho": {"humedad": (60, 80), "luz": (200, 800), "temperatura": (16, 24)},
-    "cactus": {"humedad": (10, 30), "luz": (5000, 20000), "temperatura": (20, 35)},
-    "orquidea": {"humedad": (50, 70), "luz": (1000, 3000), "temperatura": (18, 28)},
+    "orquidea": {"humedad": (40, 70), "luz": (10000, 20000), "temperatura": (18, 25)},
+    "cactus": {"humedad": (10, 30), "luz": (25000, 50000), "temperatura": (15, 35)},
+    "helecho": {"humedad": (60, 90), "luz": (3000, 8000), "temperatura": (16, 24)},
+    "suculenta": {"humedad": (20, 40), "luz": (15000, 30000), "temperatura": (12, 30)},
+    "ficus": {"humedad": (50, 75), "luz": (8000, 18000), "temperatura": (15, 28)},
 }
 
 # Límites físicos usados para que las lecturas "fuera de rango" sigan siendo válidas
-PISOS_TECHOS = {"humedad": (0, 100), "luz": (0, 100000), "temperatura": (-10, 60)}
+PISOS_TECHOS = {"humedad": (0, 100), "luz": (0, 150000), "temperatura": (-10, 60)}
 
 PROB_NORMAL = 0.75
 PROB_FUERA_DE_RANGO = 0.15   # el 10 % restante son lecturas inválidas
@@ -94,7 +97,7 @@ def main() -> None:
     parser.add_argument("--url", default="http://127.0.0.1:5000", help="URL base del backend")
     parser.add_argument("--dispositivo", required=True, help="id del dispositivo")
     parser.add_argument("--token", required=True, help="token_dispositivo")
-    parser.add_argument("--especie", default="helecho", choices=sorted(ESPECIES))
+    parser.add_argument("--especie", default="orquidea", choices=sorted(ESPECIES))
     parser.add_argument("--intervalo", type=float, default=5.0, help="segundos entre lecturas")
     parser.add_argument("--cantidad", type=int, default=0, help="0 = infinito")
     parser.add_argument("--semilla", type=int, help="semilla para repetir la misma secuencia")

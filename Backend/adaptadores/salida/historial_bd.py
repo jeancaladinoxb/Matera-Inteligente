@@ -6,7 +6,7 @@ from typing import List, Optional, Union
 
 from adaptadores.salida.bd import conectar
 from domain.modelo import (
-    EstadoParametro, EstadoPlanta, EvaluacionMatera, IndiceVitalidad, Lectura, LecturaSensores,
+    EstadoParametro, EstadoPlanta, EvaluacionMatera, IndiceVitalidad, Lectura,
 )
 
 # Formato fijo: así el orden por texto es el orden cronológico y los duplicados se detectan igual siempre
@@ -31,7 +31,7 @@ def _a_estado(fila) -> EstadoPlanta:
     )
     evaluacion = EvaluacionMatera(
         nombre_especie=fila["especie"],
-        lecturas=LecturaSensores(fila["humedad"], fila["luz"], fila["temperatura"]),
+        lecturas=lectura,
         estado_humedad=EstadoParametro(fila["estado_humedad"]),
         estado_luz=EstadoParametro(fila["estado_luz"]),
         estado_temperatura=EstadoParametro(fila["estado_temperatura"]),

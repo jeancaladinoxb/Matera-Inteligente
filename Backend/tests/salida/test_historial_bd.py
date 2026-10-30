@@ -6,7 +6,7 @@ from adaptadores.salida.historial_bd import LIMITE_MAXIMO, HistorialLecturasBd
 from adaptadores.salida.planta_bd import PlantaRepositorioBd
 from adaptadores.salida.usuario_bd import UsuarioRepositorioBd
 from domain.modelo import (
-    EstadoParametro, EvaluacionMatera, IndiceVitalidad, Lectura, LecturaSensores, Planta, Usuario,
+    EstadoParametro, EvaluacionMatera, IndiceVitalidad, Lectura, Planta, Usuario,
 )
 from tests.salida.utiles import crear_bd_temporal
 
@@ -19,7 +19,7 @@ def _lectura(minutos=0, dispositivo="d1", humedad=55.0):
 
 def _evaluacion(lectura, especie="Orquidea"):
     return EvaluacionMatera(
-        especie, LecturaSensores(lectura.humedad, lectura.luz, lectura.temperatura),
+        especie, lectura,
         EstadoParametro.OPTIMO, EstadoParametro.ALTO, EstadoParametro.BAJO, IndiceVitalidad(83.33, "BUENO"),
     )
 

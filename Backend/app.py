@@ -1,77 +1,103 @@
+"""Punto UNICO de composicion.
+
+Es el unico archivo del backend que conoce clases concretas. El dominio recibe
+sus puertos ya construidos y nunca instancia un adaptador.
+
+Cambiar la tabla de referencia de CSV a base de datos es cambiar la variable
+MATERA_TABLA y reiniciar: ni un archivo de domain/ se toca (R4).
+"""
+
 import os
-from flask import Flask, jsonify, request
+
+from flask import Flask, jsonify
 from flask_cors import CORS
-import dataclasses
 
-from application.use_cases import EvaluarMateraUseCase
-from application.dto import EvaluacionRequestDTO
-from infrastructure.csv_especie_repository import CsvEspecieRepository
-from domain.excepciones import EspecieNoEncontradaError, ValorFueraDeRangoFisicoError
-
-# NUEVO: adaptadores de la fase 2
+from adaptadores.entrada.api_auth import crear_blueprint_auth
 from adaptadores.entrada.api_dispositivos import crear_blueprint_dispositivos
+from adaptadores.entrada.api_front import crear_blueprint_front
 from adaptadores.entrada.errores import registrar_manejadores
-from fakes_temporales import FakeRegistrarLectura   # NUEVO: borrar cuando llegue el dominio real
+from adaptadores.salida.bd import inicializar_bd
+from adaptadores.salida.dispositivo_bd import DispositivoRepositorioBd
+from adaptadores.salida.emisor_jwt import EmisorJwt
+from adaptadores.salida.hasher_password import HasherPassword
+from adaptadores.salida.historial_bd import HistorialLecturasBd
+from adaptadores.salida.planta_bd import PlantaRepositorioBd
+from adaptadores.salida.tabla_bd import TablaReferenciaBd
+from adaptadores.salida.tabla_csv import TablaReferenciaCsv
+from adaptadores.salida.usuario_bd import UsuarioRepositorioBd
+from config import Config, cargar_config
+from domain.servicios import (
+    ConsultarEstadoServicio,
+    ConsultarHistorialServicio,
+    EvaluarLecturaServicio,
+    ListarEspeciesServicio,
+    ListarPlantasServicio,
+    RegistrarLecturaServicio,
+)
+from domain.servicios_cuentas import AutenticarUsuarioServicio, VincularDispositivoServicio
 
-# 1. Inicializar la app de Flask
-app = Flask(__name__)
-CORS(app)
 
-# 2. Inyección de dependencias
-ruta_csv = os.path.join(os.path.dirname(__file__), 'infrastructure', 'especies.csv')
-repositorio = CsvEspecieRepository(ruta_csv)
-caso_de_uso = EvaluarMateraUseCase(repositorio)
+def create_app(cfg: Config = None) -> Flask:
+    cfg = cargar_config() if cfg is None else cfg
 
-# NUEVO: puerto falso mientras A termina RegistrarLecturaPort
-registrar_lectura = FakeRegistrarLectura()
+    # Las tablas se crean si no existen; es idempotente.
+    inicializar_bd(cfg.ruta_db)
 
-# NUEVO: registro del adaptador de dispositivos (línea de la prueba de cambio)
-app.register_blueprint(crear_blueprint_dispositivos(registrar_lectura=registrar_lectura))
-registrar_manejadores(app)   # siempre después de registrar los blueprints
+    # ---- Adaptadores de salida -------------------------------------------
+    # R4: la unica linea del sistema que decide de donde salen los rangos.
+    # Las dos implementan TablaReferenciaPort, asi que el dominio no se entera.
+    tabla = TablaReferenciaBd(cfg.ruta_db) if cfg.tabla == "bd" else TablaReferenciaCsv(cfg.ruta_csv)
 
-# 3. Endpoint de Health Check
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({"estado": "OK", "mensaje": "API de Matera Inteligente funcionando"}), 200
+    historial = HistorialLecturasBd(cfg.ruta_db)
+    plantas = PlantaRepositorioBd(cfg.ruta_db)
+    dispositivos = DispositivoRepositorioBd(cfg.ruta_db)
+    usuarios = UsuarioRepositorioBd(cfg.ruta_db)
+    emisor = EmisorJwt(cfg.jwt_secret)
+    hasher = HasherPassword()
 
-# Endpoint para exponer el catálogo de especies (Requisito RF5)
-@app.route('/api/v1/especies', methods=['GET'])
-def listar_especies_rf5():
-    try:
-        catalogo = caso_de_uso.obtener_catalogo_especies()
-        return jsonify(catalogo), 200
-    except Exception as e:
-        return jsonify({"error": f"Error interno: {str(e)}"}), 500
+    # ---- Casos de uso (implementan los puertos de entrada) ----------------
+    evaluar_lectura = EvaluarLecturaServicio(tabla)
+    listar_especies = ListarEspeciesServicio(tabla)
+    registrar_lectura = RegistrarLecturaServicio(tabla, historial, plantas, dispositivos)
+    consultar_estado = ConsultarEstadoServicio(plantas, historial)
+    consultar_historial = ConsultarHistorialServicio(plantas, historial)
+    listar_plantas = ListarPlantasServicio(plantas)
+    vincular_dispositivo = VincularDispositivoServicio(plantas, dispositivos, tabla, emisor)
+    autenticar = AutenticarUsuarioServicio(usuarios, hasher, emisor)
 
-@app.route('/api/v1/evaluar', methods=['POST'])
-def evaluar_matera():
-    data = request.get_json()
+    # ---- Adaptadores de entrada -------------------------------------------
+    app = Flask(__name__)
+    CORS(
+        app,
+        origins=cfg.cors_origins or ["http://localhost:5500"],
+        allow_headers=["Content-Type", "Authorization"],
+    )
 
-    if not data:
-        return jsonify({"error": "No se proporcionaron datos JSON"}), 400
-
-    try:
-        request_dto = EvaluacionRequestDTO(
-            especie=data.get('especie'),
-            humedad=float(data.get('humedad', 0.0)),
-            luz=float(data.get('luz', 0.0)),
-            temperatura=float(data.get('temperatura', 0.0))
+    app.register_blueprint(crear_blueprint_auth(autenticar))
+    app.register_blueprint(
+        crear_blueprint_front(
+            consultar_estado,
+            consultar_historial,
+            listar_plantas,
+            vincular_dispositivo,
+            evaluar_lectura,
+            listar_especies,
         )
+    )
+    # El adaptador del ESP32: entro sin tocar domain/ (prueba de cambio).
+    app.register_blueprint(crear_blueprint_dispositivos(registrar_lectura))
 
-        respuesta_dto = caso_de_uso.ejecutar(request_dto)
+    @app.route("/health", methods=["GET"])
+    def health():
+        return jsonify({"estado": "OK", "tabla": cfg.tabla}), 200
 
-        respuesta_dict = dataclasses.asdict(respuesta_dto)
-        return jsonify(respuesta_dict), 200
+    # Siempre despues de registrar los blueprints.
+    registrar_manejadores(app)
+    return app
 
-    except EspecieNoEncontradaError as e:
-        return jsonify({"error": str(e)}), 404
-    except ValorFueraDeRangoFisicoError as e:
-        return jsonify({"error": str(e)}), 400
-    except ValueError as e:
-        return jsonify({"error": "Valores numéricos inválidos proporcionados."}), 400
-    except Exception as e:
-        return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
 
-# 5. Arranque del servidor (siempre al final del archivo)
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+if __name__ == "__main__":
+    create_app().run(
+        debug=os.environ.get("MATERA_DEBUG", "1") == "1",
+        port=int(os.environ.get("MATERA_PORT", "5000")),
+    )

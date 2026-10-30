@@ -41,10 +41,18 @@ def crear_blueprint_dispositivos(registrar_lectura) -> Blueprint:
             temperatura=numero(data, "temperatura"),
         )
         # LecturaInvalida (humedad 140, etc.) y DispositivoInactivo los traduce errores.py
-        estado = registrar_lectura.registrar(cmd)
+        resultado = registrar_lectura.registrar(cmd)
+        estado = resultado.estado
+
+        # 201 si se guardo; 200 si era un reenvio de una lectura que ya estaba.
         return jsonify({
             "planta_id": estado.planta_id,
-            "vitalidad": estado.vitalidad,
-        }), 201
+            "marca_tiempo": estado.lectura.marca_tiempo.isoformat(),
+            "guardada": resultado.guardada,
+            "vitalidad": {
+                "porcentaje": estado.evaluacion.indice_vitalidad.porcentaje,
+                "nivel": estado.evaluacion.indice_vitalidad.nivel,
+            },
+        }), 201 if resultado.guardada else 200
 
     return bp
